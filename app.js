@@ -13,3 +13,7 @@ io(http);
 app.listen(PORT, function(req, res){
     console.log(`Listening on port ${PORT}`);
 })
+
+app.use("/", function(req, res){
+    res.sendFile(__dirname + "/index.html");
+});
