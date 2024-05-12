@@ -1,19 +1,62 @@
 "use strict";
 
 const express = require("express");
-const http = require("http");
-const io = require("socket.io");
+const path = require("path");
+const cookieParser = require("cookie-parser");
+
+const app = express();
 
 const PORT = 3000;
 
-let app = express();
-http.createServer(app);
-io(http);
-
-app.listen(PORT, function(req, res){
-    console.log(`Listening on port ${PORT}`);
+// Have the http server listen on PORT
+app.listen(PORT, function(){
+    console.log(`Listen on Port ${PORT}`);
 })
 
-app.use("/", function(req, res){
-    res.sendFile(__dirname + "/index.html");
-});
+// Middleware for handling cookies
+app.use(cookieParser());
+
+// Parse URL-encoded form data and make it available in request.body
+app.use(express.urlencoded( {extended: true} ));
+
+// Send static files to the client
+app.use(express.static(path.join(__dirname, "public")));
+
+// Provide file on GET-request on '/'
+app.get("/", (req, res) => {
+    if(req.cookies.username !== undefined)
+        res.sendFile(path.join(__dirname, "views/chat.html"));
+    else
+        res.sendFile(path.join(__dirname, "views/login.html"));
+})
+
+// Handle form data from '/'
+app.post("/", (req, res) => {
+    validate_form(req.body.username, req.body.password, res)
+})
+
+// reset cookies
+app.get("/reset", (req, res) => {
+    for(const [key, value] of Object.entries(req.cookies)){
+        if(key)
+            res.clearCookie(key);
+    }
+    res.redirect("/");
+})
+
+// Validate form input
+function validate_form(username, password, res){
+    if(username === " " || password === " ")
+        res.send(500);
+    else{
+        set_cookies(res, {"username": username});
+        res.sendFile(path.join(__dirname, "views/chat.html"));
+    }
+}
+
+// set cookies
+function set_cookies(res, obj){
+    for(const [key, value] of Object.entries(obj)){
+        res.cookie(key, value, { maxAge: 7200000, httpOnly: true });
+    }
+}
