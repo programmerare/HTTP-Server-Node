@@ -5,11 +5,14 @@ const path = require("path");
 const cookieParser = require("cookie-parser");
 
 const app = express();
+const http = require("http").createServer(app);
+const io = require("socket.io")(http);
 
 const PORT = 3000;
 
+
 // Have the http server listen on PORT
-app.listen(PORT, function(){
+http.listen(PORT, function(){
     console.log(`Listen on Port ${PORT}`);
 })
 
@@ -25,14 +28,27 @@ app.use(express.static(path.join(__dirname, "public")));
 // Provide file on GET-request on '/'
 app.get("/", (req, res) => {
     if(req.cookies.username !== undefined)
-        res.sendFile(path.join(__dirname, "views/chat.html"));
+        res.redirect("/chat");
     else
         res.sendFile(path.join(__dirname, "views/login.html"));
+})
+
+// Provides file on GET-request on '/chat'
+app.get("/chat", (req, res) => {
+    if(req.cookies.username !== undefined)
+            res.sendFile(path.join(__dirname, "views/chat.html"));
+    else
+        res.redirect("/");
 })
 
 // Handle form data from '/'
 app.post("/", (req, res) => {
     validate_form(req.body.username, req.body.password, res)
+})
+
+// Handle form data from '/chat'
+app.post("/chat", (req, res) => {
+    validate_message(req.body.message, res);
 })
 
 // reset cookies
@@ -47,11 +63,17 @@ app.get("/reset", (req, res) => {
 // Validate form input
 function validate_form(username, password, res){
     if(username === " " || password === " ")
-        res.send(500);
+        res.send("No valid username or password!");
     else{
         set_cookies(res, {"username": username});
-        res.sendFile(path.join(__dirname, "views/chat.html"));
+        res.redirect("/chat");
     }
+}
+
+// Validate message
+function validate_message(message, res){
+    if(message.length === 0)
+        res.send("You did not provied a message!");
 }
 
 // set cookies
@@ -60,3 +82,12 @@ function set_cookies(res, obj){
         res.cookie(key, value, { maxAge: 7200000, httpOnly: true });
     }
 }
+
+// Handle user connections
+io.on("connection", (socket) => {
+    console.log("User connected");
+
+    socket.on("error", (error) => {
+        console.error("Socket error:", error);
+    })
+})
