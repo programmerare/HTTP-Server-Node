@@ -11,7 +11,8 @@
 </head>
 <body>
     <h1>Open Chat</h1>
-    <form class="form-group">
+    <form action="/" method="post" enctype="application/x-www-form-urlencoded" class="form-group">
+        <p id="error"></p>
         <input type="text" placeholder="message" name="message" id="message" class="form-control">
         <button type="submit" class="btn btn-primary mt-2">Send</button>
     </form>
