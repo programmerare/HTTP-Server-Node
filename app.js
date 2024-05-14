@@ -1,7 +1,9 @@
 "use strict";
 
+const fs = require("fs");
 const express = require("express");
 const path = require("path");
+const jsDOM = require("jsdom");
 const cookieParser = require("cookie-parser");
 
 const app = express();
@@ -48,7 +50,8 @@ app.post("/", (req, res) => {
 
 // Handle form data from '/chat'
 app.post("/chat", (req, res) => {
-    validate_message(req.body.message, res);
+    if(validate_message(req.body.message, res))
+        handle_message(req.body.message, res);
 })
 
 // reset cookies
@@ -73,7 +76,33 @@ function validate_form(username, password, res){
 // Validate message
 function validate_message(message, res){
     if(message.length === 0)
-        res.send("You did not provied a message!");
+        res.send("You did not provide a message!");
+    return true;
+}
+
+// Send message to all connected users
+function handle_message(message, res){
+    // read the chat.html into a buffer, update it and send it to the users
+    fs.readFile(path.join(__dirname, "views/chat.html"), function(err, data){
+        if(err){
+            res.send(err);
+        }
+        else{
+            let serverDOM = new jsDOM.JSDOM(data);
+            let new_message = serverDOM.window.document.createElement("li");
+            new_message.setAttribute("class", "list-group-item");
+            new_message.textContent = message;
+            serverDOM.window.document.querySelector("#chat").appendChild(new_message);
+            data = serverDOM.serialize();
+            fs.writeFile(path.join(__dirname, "views/chat.html"), data, function(err){
+                if(err){
+                    res.send(err);
+                }
+            });
+            res.send(data);
+        }
+    })
+    fs.close();
 }
 
 // set cookies
