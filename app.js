@@ -1,9 +1,7 @@
 "use strict";
 
-const fs = require("fs");
 const express = require("express");
 const path = require("path");
-const jsDOM = require("jsdom");
 const cookieParser = require("cookie-parser");
 
 const app = express();
@@ -26,6 +24,12 @@ app.use(express.urlencoded( {extended: true} ));
 
 // Send static files to the client
 app.use(express.static(path.join(__dirname, "public")));
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).send('Something went wrong!');
+});
 
 // Provide file on GET-request on '/'
 app.get("/", (req, res) => {
@@ -51,7 +55,7 @@ app.post("/", (req, res) => {
 // Handle form data from '/chat'
 app.post("/chat", (req, res) => {
     if(validate_message(req.body.message, res))
-        handle_message(req.body.message, res);
+        handle_message(req.body.message);
 })
 
 // reset cookies
@@ -65,7 +69,7 @@ app.get("/reset", (req, res) => {
 
 // Validate form input
 function validate_form(username, password, res){
-    if(username === " " || password === " ")
+    if(username.length === 0|| password.length === 0)
         res.send("No valid username or password!");
     else{
         set_cookies(res, {"username": username});
@@ -81,28 +85,8 @@ function validate_message(message, res){
 }
 
 // Send message to all connected users
-function handle_message(message, res){
-    // read the chat.html into a buffer, update it and send it to the users
-    fs.readFile(path.join(__dirname, "views/chat.html"), function(err, data){
-        if(err){
-            res.send(err);
-        }
-        else{
-            let serverDOM = new jsDOM.JSDOM(data);
-            let new_message = serverDOM.window.document.createElement("li");
-            new_message.setAttribute("class", "list-group-item");
-            new_message.textContent = message;
-            serverDOM.window.document.querySelector("#chat").appendChild(new_message);
-            data = serverDOM.serialize();
-            fs.writeFile(path.join(__dirname, "views/chat.html"), data, function(err){
-                if(err){
-                    res.send(err);
-                }
-            });
-            res.send(data);
-        }
-    })
-    fs.close();
+function handle_message(message){
+    io.emit("recieveMessage", message);
 }
 
 // set cookies
