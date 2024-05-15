@@ -22,7 +22,6 @@
   "dependencies": {
     "cookie-parser": "^1.4.6",
     "express": "^4.19.2",
-    "jsdom": "^24.0.0",
     "path": "^0.12.7",
     "socket.io": "^4.7.5"
   }
